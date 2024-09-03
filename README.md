@@ -49,7 +49,7 @@ FSMs are a powerful tool to structure and manage the action of robots in FTC to 
 [RoadRunner](https://github.com/acmerobotics/road-runner) is a Kotlin library for planning 2D mobile robot paths and trajectories for FTC.
 
 #### What are dead wheels? And what is its purpose?
-From [RoadRunner FAQ](https://learnroadrunner.com/introduction.html#what-are-dead-wheels-odometry): Dead wheels are unpowered [omni](https://gm0.org/en/latest/docs/common-mechanisms/drivetrains/index.html#term-Omni-Wheel) (directional) wheel that tracks the distance the robot has traveled through the encoder attached to the wheel’s axle. Dead wheels experience very little slip compared to [mecanum](https://gm0.org/en/latest/docs/common-mechanisms/drivetrains/holonomic.html#term-Mecanum-Wheel) wheels. This improves accuracy during high acceleration.
+From [RoadRunner FAQ](https://learnroadrunner.com/introduction.html#what-are-dead-wheels-odometry): Dead wheels are unpowered [omni](https://gm0.org/en/latest/docs/common-mechanisms/drivetrains/index.html#term-Omni-Wheel) (directional) wheel that tracks the distance the robot has traveled through the encoder attached to the wheel’s axle. Dead wheels experience very little slip compared to [mecanum](https://gm0.org/en/latest/docs/common-mechanisms/drivetrains/holonomic.html#term-Mecanum-Wheel) wheels, which improves accuracy during high acceleration.
 
 #### How can we create a trajectory using Roadrunner?
 https://learnroadrunner.com/trajectories.html presents an example to create a trajectory based on RoadRunner v0.5.6. The [repo](https://github.com/FTCLib/RoadRunner-FTCLib-Quickstart) was archived and RoadRunner has been updated to v1.0.0. But the way to [create](https://github.com/FTCLib/RoadRunner-FTCLib-Quickstart/blob/main/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/drive/SampleMecanumDrive.java#L172) a `TrajectoryBuilder` and use `TrajectoryBuilder` [methods](https://rr.brott.dev/docs/v1-0-0/core/javadoc/com/acmerobotics/roadrunner/TrajectoryBuilder.html) to configure the trajectory do not change, for example
@@ -104,24 +104,22 @@ The [ImgProc](https://docs.opencv.org/4.x/javadoc/org/opencv/imgproc/Imgproc.htm
 
 ### Problem #3
 ```
-1. Fill up polygons to include every point that vertices define.
-2. Split up path to waypoint-to-waypoint segments
-3. Use A* algorithm (greedy) on each segment
-3.1. Create min heap and a map to track visited points
-3.2. Add the starting point to the heap and mark as visited
-3.3. Loop:
-3.3.1. Pop the point with the lowest estimated distance to end from the heap
-3.3.2. If the current point is the destination, return path
-3.3.3. For each neighbor of the current point,
-If the neighbor is already visited, check if a shorter path exists and update
+1. Split up path to waypoint-to-waypoint segments
+2. Use A* algorithm (greedy) on each segment
+2.1. Create min heap and a map to track visited points
+2.2. Add the starting point to the heap and mark as visited
+2.3. Loop:
+2.3.1. Pop the point with the lowest estimated distance to end from the heap
+2.3.2. If the current point is the destination, return path
+2.3.3. For each good neighbor (found with the raycast algorithm) of the current point, If the neighbor is already visited, check if a shorter path exists and update
 If not visited, calculate its distance to end and distance from start, then add it to the queue and mark it as visited.
-3.4 If the destination is reached, find the parent of each point to construct the path; otherwise, return an empty list if no path is found.
-4. Combine segments into the final path
+2.4 If the destination is reached, find the parent of each point to construct the path; otherwise, return an empty list if no path is found.
+3. Combine segments into the final path
 ```
 ## Part 3 - Code
 
 ### Problem 1
-```declarative
+```
 usage: Problem1
  -i,--input-image <arg>    Input image path, default is src/main/resources/cone.png
  -o,--output-image <arg>   Output image path, default is /tmp/masked_cone.png
@@ -133,7 +131,7 @@ usage: Problem2
  -i,--input-data <arg>    Input data path, default is src/main/resources/align_in
  -o,--output-data <arg>   Output data path, default is /tmp/align_out
 ```
-`calculateAngle` is implemented in `org.Mastermindz.utils` and unit tested with eight cases in `org.Mastermindz.UtilsTest`.
+`calculateAngle` is unit tested with eight cases in `org.Mastermindz.Problem2Test`.
 
 ### Problem 3
 ```
@@ -141,4 +139,5 @@ usage: Problem3
 -i,--input <arg>    Input path, default is src/main/resources/navigate.in
 -o,--output <arg>   Output path, default is /tmp/navigate.out
 ```
-Core of the implementation is the A* algorithm.
+Core of the implementation is the ray-casting algorithm and the A* algorithm.
+`checkIntersection` is unit tested with four cases in `org.Mastermindz.Problem3Test`.

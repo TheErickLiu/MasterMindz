@@ -5,44 +5,88 @@ import java.util.*;
 import java.io.*;
 
 public class Problem3 {
-    public static Set<String> findObstacles(List<List<int[]>> polygons) {
-        Set<String> obstacles = new HashSet<>();
+    public static boolean checkIntersection (double x, double y, int[] p1, int[] p2) {
 
-        for (List<int[]> polygon : polygons) {
-            Map<Integer, List<Integer>> yXList = new HashMap<>();
-            for (int[] point : polygon) {
-                yXList.computeIfAbsent(point[1], k -> new ArrayList<>()).add(point[0]);
-            }
+        // get the min and max of the polygon side on x axis and y axis
+        double x_min = Math.min(p1[0], p2[0]);
+        double x_max = Math.max(p1[0], p2[0]);
+        double y_min = Math.min(p1[1], p2[1]);
+        double y_max = Math.max(p1[1], p2[1]);
 
-            for (int y = Collections.min(yXList.keySet()); y <= Collections.max(yXList.keySet()); y++) {
-                if (yXList.containsKey(y)) {
-                    int xMin = Collections.min(yXList.get(y));
-                    int xMax = Collections.max(yXList.get(y));
-                    for (int x = xMin; x <= xMax; x++) {
-                        obstacles.add(x + "," + y);
-                    }
-                }
-            }
+        // special case: (p1, p2) is a horizontal line
+        if (y_min == y_max) {
+            // true if share same y and between p1.x and p2.x
+            return y == y_min && x >= x_min && x <= x_max;
         }
-        return obstacles;
+
+        // special case handling: the point (x, y) shares the same y as one of endpoints,
+        // which means (x, y) may intersect with two sides (with the same endpoint),
+        // then an offset will make sure it's only counted once.
+        if (y == y_min || y == y_max) {
+            y += 0.01;
+        }
+
+        // case 1: out of range thus no intersection
+        if (y < y_min || y > y_max || x > x_max) {
+            return false;
+        }
+
+        // case 2: to the left of both endpoints, there is intersection
+        if (x < x_min) {
+            return true;
+        }
+
+        // case 3: calculate the x-coordinate of the intersection
+        double xIntersection = p1[0] + (y - p1[1]) * (p2[0] - p1[0]) / (p2[1] - p1[1]);
+        return x < xIntersection;
     }
 
-    public static List<int[]> neighbors(Point p, Set<String> obstacles, int N, int M) {
+    public static boolean pointInPolygon(int x, int y, List<int[]> polygon) {
+        int intersections = 0;
+
+        // quick check if it is one of the polygon endpoints
+        for (int[] p : polygon) {
+            if (x == p[0] && y == p[1]) {
+                return true;
+            }
+        }
+
+        // check by ray-casting
+        for (int i = 0; i < polygon.size(); i++) {
+            int[] p1 = polygon.get(i);
+            int[] p2 = polygon.get((i+1) % polygon.size());
+            if (checkIntersection(x, y, p1, p2)) {
+                intersections++;
+            }
+        }
+
+        return ((intersections % 2) != 0);
+    }
+
+    public static List<int[]> neighbors(Point p, List<List<int[]>> polygons, int N, int M) {
         List<int[]> goodNeighbors = new ArrayList<>();
         int[][] directions = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
 
         for (int[] d : directions) {
             int x = p.getX() + d[0];
             int y = p.getY() + d[1];
-            if (y > 0 && x > 0 && y < N && x < M && !obstacles.contains(x + "," + y)) {
-                goodNeighbors.add(new int[]{x, y});
+            if (y > 0 && x > 0 && y < N && x < M) {
+                boolean isGoodNeighbor = true;
+                for (List<int[]> polygon : polygons) {
+                    if (pointInPolygon(x, y, polygon)) {
+                        isGoodNeighbor = false;
+                        break;
+                    }
+                }
+                if (isGoodNeighbor) {
+                    goodNeighbors.add(new int[]{x, y});
+                }
             }
         }
-
         return goodNeighbors;
     }
 
-    public static List<int[]> navigate(int[] p1, int[] p2, Set<String> obstacles, int N, int M) {
+    public static List<int[]> navigate(int[] p1, int[] p2, List<List<int[]>> polygons, int N, int M) {
         PriorityQueue<Point> openPoints = new PriorityQueue<>();
         Map<String, Point> visited = new HashMap<>();
         Point start = new Point(p1[0], p1[1]);
@@ -57,7 +101,7 @@ public class Problem3 {
                 return retraceSteps(current);
             }
 
-            for (int[] n : neighbors(current, obstacles, N, M)) {
+            for (int[] n : neighbors(current, polygons, N, M)) {
                 String key = n[0] + "," + n[1];
                 if (visited.containsKey(key)) {
                     Point p = visited.get(key);
@@ -94,11 +138,10 @@ public class Problem3 {
     }
 
     public static List<int[]> findPath(List<int[]> waypoints, List<List<int[]>> polygons, int N, int M) {
-        Set<String> obstacles = findObstacles(polygons);
         List<int[]> finalPath = new ArrayList<>();
 
         for (int i = 0; i < waypoints.size() - 1; i++) {
-            List<int[]> pathSegment = navigate(waypoints.get(i), waypoints.get(i + 1), obstacles, N, M);
+            List<int[]> pathSegment = navigate(waypoints.get(i), waypoints.get(i + 1), polygons, N, M);
             finalPath.addAll(i == 0 ? pathSegment : pathSegment.subList(1, pathSegment.size()));
         }
 
@@ -110,7 +153,7 @@ public class Problem3 {
         List<int[]> waypoints = new ArrayList<>();
         List<List<int[]>> polygons = new ArrayList<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(new File(input)))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
             String[] params = reader.readLine().trim().split(" ");
             N = Integer.parseInt(params[0]);
             M = Integer.parseInt(params[1]);
@@ -165,7 +208,6 @@ public class Problem3 {
         CommandLine cmd;
 
         try {
-            // Parse command line arguments
             cmd = parser.parse(options, args);
             String inputPath = cmd.getOptionValue("i", "src/main/resources/navigate.in");
             String outputPath = cmd.getOptionValue("o", "/tmp/navigate.out");
